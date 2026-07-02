@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interdoc | Ask anything about your documents</title>
+    <style>
+      :root {
+        --bg: #060816;
+        --panel: rgba(10, 15, 31, 0.9);
+        --panel-strong: rgba(16, 24, 40, 0.96);
+        --border: rgba(148, 163, 184, 0.16);
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --accent: #8b5cf6;
+        --accent-2: #38bdf8;
+        --accent-soft: rgba(56, 189, 248, 0.14);
+        --success: #22c55e;
+        --shadow: 0 24px 70px rgba(2, 6, 23, 0.45);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 26%),
+          radial-gradient(circle at bottom right, rgba(139, 92, 246, 0.2), transparent 22%),
+          linear-gradient(135deg, #040713 0%, #060816 40%, #0b1225 100%);
+        min-height: 100vh;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+        background-size: 34px 34px;
+        mask-image: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent 80%);
+        pointer-events: none;
+      }
+
+      .app-shell {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        min-height: 100vh;
+        gap: 20px;
+        padding: 20px;
+      }
+
+      .sidebar, .chat-card, .topbar {
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow);
+      }
+
+      .sidebar {
+        padding: 22px 18px;
+        border-radius: 26px;
+        background: linear-gradient(180deg, rgba(8, 13, 27, 0.95) 0%, rgba(10, 16, 31, 0.92) 100%);
+        backdrop-filter: blur(22px);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding-bottom: 8px;
+      }
+
+      .brand-mark {
+        width: 46px;
+        height: 46px;
+        border-radius: 15px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        box-shadow: 0 10px 24px rgba(56, 189, 248, 0.22);
+        font-weight: 700;
+        letter-spacing: 0.03em;
+      }
+
+      .brand h1 { margin: 0; font-size: 1.05rem; }
+      .brand p { margin: 3px 0 0; font-size: 0.84rem; color: var(--muted); }
+
+      .sidebar-card {
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(255,255,255,0.06);
+        background: linear-gradient(135deg, rgba(56, 189, 248, 0.1), rgba(139, 92, 246, 0.12));
+      }
+
+      .hero-eyebrow, .section-title, .topbar-eyebrow {
+        font-size: 0.74rem;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: #b7c4da;
+        margin-bottom: 6px;
+      }
+
+      .sidebar-card h3 { margin: 0 0 8px; font-size: 1rem; }
+      .sidebar-card p { margin: 0 0 12px; color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
+      .hero-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+      .button {
+        border: 0;
+        border-radius: 999px;
+        padding: 10px 14px;
+        font-weight: 600;
+        cursor: pointer;
+        color: white;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        box-shadow: 0 12px 24px rgba(56, 189, 248, 0.16);
+      }
+
+      .button.secondary {
+        background: rgba(255,255,255,0.06);
+        box-shadow: none;
+        color: var(--text);
+      }
+
+      .button:disabled { opacity: 0.7; cursor: progress; }
+
+      .upload-card {
+        border: 1px dashed rgba(56, 189, 248, 0.3);
+        background: rgba(255,255,255,0.03);
+        border-radius: 18px;
+        padding: 14px;
+        transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+      }
+
+      .upload-card.dragover {
+        transform: translateY(-2px);
+        border-color: rgba(56, 189, 248, 0.75);
+        background: rgba(56, 189, 248, 0.08);
+      }
+
+      .upload-card strong { display: block; margin-bottom: 6px; }
+      .upload-card p { margin: 0 0 10px; color: var(--muted); font-size: 0.9rem; }
+
+      .upload-status {
+        margin: 10px 0 12px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.06);
+      }
+
+      .upload-status-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+      .upload-spinner {
+        width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(56, 189, 248, 0.25); border-top-color: #38bdf8; animation: spin 0.8s linear infinite; flex-shrink: 0;
+      }
+      .upload-status strong { display: block; font-size: 0.9rem; margin-bottom: 2px; }
+      .upload-status p { margin: 0; font-size: 0.82rem; }
+      .progress-bar { width: 100%; height: 7px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.08); }
+      .progress-bar span { display: block; height: 100%; width: 0%; border-radius: inherit; background: linear-gradient(90deg, var(--accent-2), var(--accent)); transition: width 180ms ease; }
+
+      .docs-section { display: flex; flex-direction: column; gap: 10px; }
+      .doc-list { display: flex; flex-direction: column; gap: 10px; }
+      .doc-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 12px;
+        border-radius: 14px;
+        background: rgba(255,255,255,0.035);
+        border: 1px solid var(--border);
+      }
+      .doc-icon { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: rgba(56, 189, 248, 0.12); color: #7dd3fc; font-weight: 700; font-size: 0.82rem; }
+      .doc-meta strong { display: block; font-size: 0.94rem; }
+      .doc-meta small { display: block; margin-top: 3px; color: var(--muted); }
+
+      .main-pane { display: flex; flex-direction: column; gap: 16px; }
+      .topbar {
+        display: flex; justify-content: space-between; align-items: center; gap: 12px;
+        padding: 18px 20px; border-radius: 24px; background: linear-gradient(135deg, rgba(12, 18, 35, 0.94), rgba(15, 23, 42, 0.95));
+      }
+      .topbar-copy h2 { margin: 0 0 4px; font-size: 1.15rem; }
+      .topbar-copy p { margin: 0; color: var(--muted); font-size: 0.93rem; }
+      .topbar-meta { display: flex; gap: 10px; flex-wrap: wrap; }
+      .status-pill, .stats-badge {
+        display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; font-size: 0.86rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); color: #e2e8f0;
+      }
+      .status-pill::before { content: ""; width: 8px; height: 8px; border-radius: 999px; background: var(--success); box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.15); }
+
+      .chat-card {
+        flex: 1; display: flex; flex-direction: column; border-radius: 28px; overflow: hidden; background: linear-gradient(180deg, rgba(9, 14, 29, 0.96) 0%, rgba(10, 15, 31, 0.94) 100%);
+      }
+      .chat-card-header {
+        padding: 16px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 12px; background: rgba(255,255,255,0.02);
+      }
+      .chat-card-header strong { font-size: 0.95rem; }
+      .chat-card-header p { margin: 3px 0 0; color: var(--muted); font-size: 0.84rem; }
+      .assistant-pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 999px; background: rgba(56, 189, 248, 0.1); color: #bae6fd; font-size: 0.82rem; border: 1px solid rgba(56, 189, 248, 0.18); }
+
+      .chat-body { flex: 1; padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+      .empty-state {
+        margin: auto; text-align: center; max-width: 520px; padding: 28px; border-radius: 22px; background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+      }
+      .empty-state h3 { margin: 0 0 10px; font-size: 1.1rem; }
+      .empty-state p { margin: 0; color: var(--muted); line-height: 1.65; }
+
+      .message-row { display: flex; align-items: flex-end; gap: 10px; }
+      .message-row.user { justify-content: flex-end; }
+      .avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 0.84rem; font-weight: 700; flex-shrink: 0; }
+      .avatar.assistant { background: linear-gradient(135deg, rgba(56,189,248,0.2), rgba(139,92,246,0.2)); color: #7dd3fc; border: 1px solid rgba(56,189,248,0.22); }
+      .avatar.user { background: linear-gradient(135deg, rgba(139,92,246,0.22), rgba(56,189,248,0.2)); color: #ddd6fe; border: 1px solid rgba(139,92,246,0.2); }
+      .bubble { max-width: min(78%, 760px); padding: 12px 14px; border-radius: 18px; line-height: 1.6; font-size: 0.95rem; }
+      .bubble.user { background: linear-gradient(135deg, rgba(124, 58, 237, 0.95), rgba(56, 189, 248, 0.9)); border-bottom-right-radius: 6px; }
+      .bubble.assistant { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.06); border-bottom-left-radius: 6px; }
+      .bubble .meta { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 7px; font-size: 0.76rem; color: var(--muted); }
+      .citations { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+      .citation-tag { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: rgba(56, 189, 248, 0.12); color: #bae6fd; font-size: 0.8rem; border: 1px solid rgba(56, 189, 248, 0.2); }
+
+      .suggestions { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 18px 14px; }
+      .suggestion-chip { border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); color: #e2e8f0; padding: 8px 12px; border-radius: 999px; cursor: pointer; font-size: 0.84rem; }
+      .suggestion-chip:hover { border-color: rgba(56,189,248,0.32); background: rgba(56,189,248,0.08); }
+
+      .composer { padding: 16px; border-top: 1px solid var(--border); background: rgba(255,255,255,0.02); }
+      .composer-row { display: flex; gap: 10px; align-items: center; }
+      .composer input {
+        flex: 1; border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: var(--text); padding: 12px 14px; border-radius: 999px; outline: none;
+      }
+      .composer input:focus { border-color: rgba(56, 189, 248, 0.45); box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.14); }
+      .hint { margin-top: 10px; color: var(--muted); font-size: 0.84rem; }
+
+      .toast {
+        position: fixed; right: 22px; bottom: 22px; background: rgba(8, 15, 30, 0.95); color: var(--text); border: 1px solid var(--border); padding: 12px 14px; border-radius: 12px; box-shadow: var(--shadow); opacity: 0; transform: translateY(8px); pointer-events: none; transition: 180ms ease;
+      }
+      .toast.show { opacity: 1; transform: translateY(0); }
+
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      @media (max-width: 980px) {
+        .app-shell { grid-template-columns: 1fr; }
+      }
+
+      @media (max-width: 720px) {
+        .topbar { flex-direction: column; align-items: flex-start; }
+        .bubble { max-width: 92%; }
+        .composer-row { flex-direction: column; align-items: stretch; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">I</div>
+          <div>
+            <h1>Interdoc</h1>
+            <p>AI-native document intelligence</p>
+          </div>
+        </div>
+
+        <div class="sidebar-card">
+          <div class="hero-eyebrow">New workspace</div>
+          <h3>Turn documents into a live knowledge layer</h3>
+          <p>Upload a source, ask anything, and receive grounded answers with citations.</p>
+          <div class="hero-actions">
+            <button id="pickFileBtn" class="button" type="button">Upload file</button>
+            <button class="button secondary" type="button">View docs</button>
+          </div>
+        </div>
+
+        <div id="uploadZone" class="upload-card">
+          <strong>Drop your file here</strong>
+          <p>PDF, TXT, or Markdown works beautifully. Interdoc indexes it instantly.</p>
+          <div id="uploadStatus" class="upload-status" hidden>
+            <div class="upload-status-row">
+              <div class="upload-spinner"></div>
+              <div>
+                <strong id="uploadStatusTitle">Preparing upload</strong>
+                <p id="uploadStatusText">Uploading and indexing your document…</p>
+              </div>
+            </div>
+            <div class="progress-bar"><span id="uploadProgressFill"></span></div>
+          </div>
+          <input id="fileInput" type="file" hidden />
+        </div>
+
+        <div class="docs-section">
+          <div class="section-title">Workspace documents</div>
+          <div id="docList" class="doc-list">
+            <div class="doc-item">
+              <div class="doc-icon">+</div>
+              <div class="doc-meta">
+                <strong>No documents yet</strong>
+                <small>Upload your first file to start chatting.</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main-pane">
+        <header class="topbar">
+          <div class="topbar-copy">
+            <div class="topbar-eyebrow">Live knowledge assistant</div>
+            <h2>Ask anything from your uploaded sources</h2>
+            <p>Every answer is grounded in your content and linked to the exact chunk.</p>
+          </div>
+          <div class="topbar-meta">
+            <div class="status-pill">Connected</div>
+            <div class="stats-badge">Citations enabled</div>
+          </div>
+        </header>
+
+        <section class="chat-card">
+          <div class="chat-card-header">
+            <div>
+              <strong>Interdoc assistant</strong>
+              <p>Context-aware answers with source-backed citations</p>
+            </div>
+            <div class="assistant-pill">● Ready to answer</div>
+          </div>
+
+          <div id="chatBody" class="chat-body">
+            <div class="empty-state">
+              <h3>Welcome to Interdoc</h3>
+              <p>Upload a document, then ask a question in plain English. Every answer includes the source document and the chunk that informed it.</p>
+            </div>
+          </div>
+
+          <div class="suggestions">
+            <button class="suggestion-chip" data-question="Summarize this document in 3 bullet points">Summarize this document</button>
+            <button class="suggestion-chip" data-question="What are the key takeaways from this file?">Key takeaways</button>
+            <button class="suggestion-chip" data-question="Find the most important decision or recommendation in this document">Find the recommendation</button>
+          </div>
+
+          <div class="composer">
+            <div class="composer-row">
+              <input id="questionInput" type="text" placeholder="Ask about your documents…" />
+              <button id="sendBtn" class="button" type="button">Ask</button>
+            </div>
+            <div class="hint">Try asking for a summary, action items, or a specific detail from your document.</div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+      const apiBase = "http://127.0.0.1:8000";
+      const state = { documents: [], messages: [] };
+
+      const chatBody = document.getElementById("chatBody");
+      const docList = document.getElementById("docList");
+      const toast = document.getElementById("toast");
+      const questionInput = document.getElementById("questionInput");
+      const fileInput = document.getElementById("fileInput");
+      const uploadZone = document.getElementById("uploadZone");
+      const uploadStatus = document.getElementById("uploadStatus");
+      const uploadStatusTitle = document.getElementById("uploadStatusTitle");
+      const uploadStatusText = document.getElementById("uploadStatusText");
+      const uploadProgressFill = document.getElementById("uploadProgressFill");
+      const pickFileBtn = document.getElementById("pickFileBtn");
+      const suggestionChips = document.querySelectorAll(".suggestion-chip");
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add("show");
+        clearTimeout(showToast.timeout);
+        showToast.timeout = setTimeout(() => toast.classList.remove("show"), 2400);
+      }
+
+      function renderDocuments() {
+        if (!state.documents.length) {
+          docList.innerHTML = `
+            <div class="doc-item">
+              <div class="doc-icon">+</div>
+              <div class="doc-meta">
+                <strong>No documents yet</strong>
+                <small>Upload your first file to start chatting.</small>
+              </div>
+            </div>
+          `;
+          return;
+        }
+
+        docList.innerHTML = state.documents.map((doc) => `
+          <div class="doc-item">
+            <div class="doc-icon">${(doc.name || "DOC").slice(0, 2).toUpperCase()}</div>
+            <div class="doc-meta">
+              <strong>${doc.name}</strong>
+              <small>${doc.chunksCreated} chunks indexed</small>
+            </div>
+          </div>
+        `).join("");
+      }
+
+      function renderMessages() {
+        if (!state.messages.length) {
+          chatBody.innerHTML = `
+            <div class="empty-state">
+              <h3>Welcome to Interdoc</h3>
+              <p>Upload a document, then ask a question in plain English. Every answer includes the source document and the chunk that informed it.</p>
+            </div>
+          `;
+          return;
+        }
+
+        chatBody.innerHTML = state.messages.map((message) => {
+          const isUser = message.role === "user";
+          const citations = message.sources && message.sources.length
+            ? message.sources.map((source) => `<span class="citation-tag">${source.source} · chunk ${source.chunk_index + 1}</span>`).join("")
+            : "";
+
+          return `
+            <div class="message-row ${isUser ? "user" : ""}">
+              ${!isUser ? `<div class="avatar assistant">AI</div>` : ""}
+              <div class="bubble ${isUser ? "user" : "assistant"}">
+                ${!isUser ? `<div class="meta"><span>Interdoc</span><span>${message.time}</span></div>` : ""}
+                <div>${message.content}</div>
+                ${!isUser && citations ? `<div class="citations">${citations}</div>` : ""}
+              </div>
+              ${isUser ? `<div class="avatar user">U</div>` : ""}
+            </div>
+          `;
+        }).join("");
+      }
+
+      function appendMessage(role, content, sources = []) {
+        state.messages.push({ role, content, sources, time: new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) });
+        renderMessages();
+        chatBody.scrollTop = chatBody.scrollHeight;
+      }
+
+      function setUploadState(title, text, percent) {
+        uploadStatus.hidden = false;
+        uploadStatusTitle.textContent = title;
+        uploadStatusText.textContent = text;
+        uploadProgressFill.style.width = `${Math.max(percent, 8)}%`;
+      }
+
+      function resetUploadState() {
+        uploadStatus.hidden = true;
+        uploadProgressFill.style.width = "0%";
+        pickFileBtn.disabled = false;
+        pickFileBtn.textContent = "Upload file";
+      }
+
+      async function uploadFile(file) {
+        if (!file) return;
+
+        pickFileBtn.disabled = true;
+        pickFileBtn.textContent = "Uploading…";
+        setUploadState("Uploading document", "Sending your file to Interdoc and indexing it…", 14);
+
+        let progress = 14;
+        const progressTimer = setInterval(() => {
+          progress = Math.min(progress + Math.random() * 14 + 6, 90);
+          uploadProgressFill.style.width = `${progress}%`;
+        }, 220);
+
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+
+          const response = await fetch(`${apiBase}/upload`, { method: "POST", body: formData });
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.detail || "Upload failed");
+
+          clearInterval(progressTimer);
+          setUploadState("Document ready", `${payload.filename || file.name} is now available for chat.`, 100);
+
+          state.documents.unshift({ name: payload.filename || file.name, chunksCreated: payload.chunks_created || 0 });
+          renderDocuments();
+          showToast(`${payload.filename || file.name} uploaded successfully`);
+          setTimeout(resetUploadState, 1600);
+        } catch (error) {
+          clearInterval(progressTimer);
+          setUploadState("Upload failed", error.message || "We couldn’t process that document.", 100);
+          showToast(error.message || "Upload failed");
+          setTimeout(resetUploadState, 1800);
+        }
+      }
+
+      async function askQuestion(question) {
+        if (!question.trim()) return;
+
+        appendMessage("user", question.trim());
+        questionInput.value = "";
+
+        try {
+          const response = await fetch(`${apiBase}/query`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question })
+          });
+
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.detail || "Query failed");
+
+          appendMessage("assistant", payload.answer || "No answer returned.", payload.sources || []);
+        } catch (error) {
+          appendMessage("assistant", `I couldn’t answer that right now. ${error.message}`);
+        }
+      }
+
+      document.getElementById("sendBtn").addEventListener("click", () => askQuestion(questionInput.value));
+      questionInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          askQuestion(questionInput.value);
+        }
+      });
+
+      pickFileBtn.addEventListener("click", () => fileInput.click());
+      fileInput.addEventListener("change", (event) => {
+        const [file] = event.target.files || [];
+        uploadFile(file);
+        event.target.value = "";
+      });
+
+      suggestionChips.forEach((chip) => {
+        chip.addEventListener("click", () => {
+          questionInput.value = chip.dataset.question || "";
+          questionInput.focus();
+        });
+      });
+
+      ["dragenter", "dragover"].forEach((eventName) => {
+        uploadZone.addEventListener(eventName, (event) => {
+          event.preventDefault();
+          uploadZone.classList.add("dragover");
+        });
+      });
+
+      ["dragleave", "drop"].forEach((eventName) => {
+        uploadZone.addEventListener(eventName, (event) => {
+          event.preventDefault();
+          uploadZone.classList.remove("dragover");
+        });
+      });
+
+      uploadZone.addEventListener("drop", (event) => {
+        const [file] = event.dataTransfer?.files || [];
+        uploadFile(file);
+      });
+
+      renderDocuments();
+      renderMessages();
+    </script>
+  </body>
+</html>
