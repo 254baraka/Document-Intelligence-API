@@ -18,7 +18,7 @@ class QueryRequest(BaseModel):
     question: str
     top_k: int = 4
 
-@app.get("/")
+@app.get("/health")
 def root():
     return {"status": "alive"}
 
