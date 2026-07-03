@@ -44,10 +44,10 @@
 
       .app-shell {
         display: grid;
-        grid-template-columns: 340px 1fr;
+        grid-template-columns: 360px 1fr;
         min-height: 100vh;
-        gap: 20px;
-        padding: 20px;
+        gap: 22px;
+        padding: 22px;
       }
 
       .sidebar, .chat-card, .topbar {
@@ -56,13 +56,13 @@
       }
 
       .sidebar {
-        padding: 22px 18px;
-        border-radius: 26px;
-        background: linear-gradient(180deg, rgba(8, 13, 27, 0.95) 0%, rgba(10, 16, 31, 0.92) 100%);
+        padding: 24px 20px;
+        border-radius: 30px;
+        background: linear-gradient(180deg, rgba(8, 13, 27, 0.94) 0%, rgba(10, 16, 31, 0.96) 100%);
         backdrop-filter: blur(22px);
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 18px;
       }
 
       .brand {
@@ -126,21 +126,55 @@
       .button:disabled { opacity: 0.7; cursor: progress; }
 
       .upload-card {
-        border: 1px dashed rgba(56, 189, 248, 0.3);
-        background: rgba(255,255,255,0.03);
-        border-radius: 18px;
-        padding: 14px;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(255,255,255,0.025);
+        border-radius: 24px;
+        padding: 18px;
         transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
       }
 
       .upload-card.dragover {
         transform: translateY(-2px);
-        border-color: rgba(56, 189, 248, 0.75);
+        border-color: rgba(56, 189, 248, 0.8);
         background: rgba(56, 189, 248, 0.08);
       }
 
-      .upload-card strong { display: block; margin-bottom: 6px; }
-      .upload-card p { margin: 0 0 10px; color: var(--muted); font-size: 0.9rem; }
+      .upload-dropzone {
+        display: grid;
+        gap: 14px;
+        align-items: center;
+        justify-items: center;
+        padding: 26px 18px;
+        border: 2px dashed rgba(56, 189, 248, 0.3);
+        border-radius: 24px;
+        background: rgba(56, 189, 248, 0.06);
+        color: var(--text);
+        text-align: center;
+        cursor: pointer;
+      }
+
+      .upload-dropzone:hover {
+        background: rgba(56, 189, 248, 0.1);
+      }
+
+      .upload-dropzone.dragover {
+        border-color: rgba(56, 189, 248, 0.8);
+        background: rgba(56, 189, 248, 0.12);
+      }
+
+      .upload-icon {
+        width: 46px;
+        height: 46px;
+        display: grid;
+        place-items: center;
+        border-radius: 16px;
+        background: rgba(56, 189, 248, 0.16);
+        color: #7dd3fc;
+        font-size: 1.2rem;
+      }
+
+      .upload-card strong { display: block; margin-bottom: 4px; font-size: 0.98rem; }
+      .upload-card p { margin: 0; color: var(--muted); font-size: 0.92rem; line-height: 1.55; }
 
       .upload-status {
         margin: 10px 0 12px;
@@ -268,8 +302,15 @@
         </div>
 
         <div id="uploadZone" class="upload-card">
-          <strong>Drop your file here</strong>
-          <p>PDF, TXT, or Markdown works beautifully. Interdoc indexes it instantly.</p>
+          <div id="uploadDropzone" class="upload-dropzone">
+            <div class="upload-icon">⇪</div>
+            <div>
+              <strong>Drag & drop a file to upload</strong>
+              <p>PDF, TXT, or Markdown. Your document will be indexed for quick answers.</p>
+            </div>
+            <button id="pickFileBtn" class="button secondary" type="button">Select a file</button>
+          </div>
+
           <div id="uploadStatus" class="upload-status" hidden>
             <div class="upload-status-row">
               <div class="upload-spinner"></div>
@@ -355,6 +396,7 @@
       const questionInput = document.getElementById("questionInput");
       const fileInput = document.getElementById("fileInput");
       const uploadZone = document.getElementById("uploadZone");
+      const uploadDropzone = document.getElementById("uploadDropzone");
       const uploadStatus = document.getElementById("uploadStatus");
       const uploadStatusTitle = document.getElementById("uploadStatusTitle");
       const uploadStatusText = document.getElementById("uploadStatusText");
@@ -525,20 +567,20 @@
       });
 
       ["dragenter", "dragover"].forEach((eventName) => {
-        uploadZone.addEventListener(eventName, (event) => {
+        uploadDropzone.addEventListener(eventName, (event) => {
           event.preventDefault();
-          uploadZone.classList.add("dragover");
+          uploadDropzone.classList.add("dragover");
         });
       });
 
       ["dragleave", "drop"].forEach((eventName) => {
-        uploadZone.addEventListener(eventName, (event) => {
+        uploadDropzone.addEventListener(eventName, (event) => {
           event.preventDefault();
-          uploadZone.classList.remove("dragover");
+          uploadDropzone.classList.remove("dragover");
         });
       });
 
-      uploadZone.addEventListener("drop", (event) => {
+      uploadDropzone.addEventListener("drop", (event) => {
         const [file] = event.dataTransfer?.files || [];
         uploadFile(file);
       });
